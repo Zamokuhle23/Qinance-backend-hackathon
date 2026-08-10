@@ -140,6 +140,21 @@ class Loan(models.Model):
             return (self.total_due / Decimal('40')).quantize(Decimal('0.01'))
         return self.daily_payment
 
+    @property
+    def virtual_end_date(self):
+        if not self.start_date:
+            return self.end_date
+        holidays = get_holidays()
+        days_added = 0
+        current_date = self.start_date
+        while days_added < self.virtual_duration_days:
+            if current_date.weekday() < 5 and current_date not in holidays:
+                days_added += 1
+                if days_added == self.virtual_duration_days:
+                    break
+            current_date += timedelta(days=1)
+        return current_date
+
     # ---------------- Utility methods ----------------
 
     def _compute_days_elapsed(self, holidays):
@@ -176,11 +191,11 @@ class Loan(models.Model):
         Before the loan starts (today < start_date), returns duration_days.
         After end_date, returns 0.
         """
-        if not self.end_date:
+        if not self.virtual_end_date:
             return 0
         from django.utils import timezone
         today = timezone.localdate()
-        if today > self.end_date:
+        if today > self.virtual_end_date:
             return 0
         if self.start_date and today < self.start_date:
             return self.virtual_duration_days
@@ -310,10 +325,10 @@ class Loan(models.Model):
         LOAN_LADDER_25 = [400, 500, 600, 1000, 1500, 2000, 2500, 3000, 3500]
 
         # Select ladder and rules
-        if self.interest_rate == 20:
-            ladder = LOAN_LADDER_20
-            expected_days = 20
-            late_cutoff = 22
+        if self.interest_rate in (20, 25) or self.duration_days in (20, 25):
+            ladder = LOAN_LADDER_20 if self.interest_rate == 20 else LOAN_LADDER_25
+            expected_days = 40
+            late_cutoff = 42
         else:
             ladder = LOAN_LADDER_25
             expected_days = 25
