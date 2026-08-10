@@ -10,7 +10,7 @@ class AIConfig:
 
     # Gemini settings
     GEMINI_API_KEY = config('GEMINI_API_KEY', default='')
-    GEMINI_MODEL = config('GEMINI_MODEL', default='gemini-1.5-pro')
+    GEMINI_MODEL = config('GEMINI_MODEL', default='gemini-2.0-flash')
 
     # Generic provider settings (future providers)
     CLAUDE_API_KEY = config('CLAUDE_API_KEY', default='')
