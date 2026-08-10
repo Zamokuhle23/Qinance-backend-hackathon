@@ -128,6 +128,18 @@ class Loan(models.Model):
 
         super().save(*args, **kwargs)
 
+    @property
+    def virtual_duration_days(self):
+        if self.duration_days in (20, 25):
+            return 40
+        return self.duration_days
+
+    @property
+    def virtual_daily_payment(self):
+        if self.duration_days in (20, 25):
+            return (self.total_due / Decimal('40')).quantize(Decimal('0.01'))
+        return self.daily_payment
+
     # ---------------- Utility methods ----------------
 
     def _compute_days_elapsed(self, holidays):
@@ -171,9 +183,9 @@ class Loan(models.Model):
         if today > self.end_date:
             return 0
         if self.start_date and today < self.start_date:
-            return self.duration_days
+            return self.virtual_duration_days
         elapsed = self._compute_days_elapsed(holidays)
-        return max(self.duration_days - elapsed, 0)
+        return max(self.virtual_duration_days - elapsed, 0)
 
     @property
     def days_remaining(self):
@@ -270,9 +282,9 @@ class Loan(models.Model):
         """
         Expected working days depending on loan type
         """
-        if self.interest_rate == 20:
-            return 20
-        return 25
+        if self.interest_rate in (20, 25) or self.duration_days in (20, 25):
+            return 40
+        return self.duration_days
 
     @property
     def total_working_days(self):

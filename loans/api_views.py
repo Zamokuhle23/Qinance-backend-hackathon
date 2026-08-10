@@ -321,7 +321,8 @@ class LoanOfferAPIView(APIView):
             amount = 250
 
         offers = []
-        for interest, days in [(20, 20), (25, 25)]:
+        # RESTRICT TO 20% INTEREST FOR 40 WORKING DAYS ONLY (represented as 20 days in db)
+        for interest, days in [(20, 40)]:
             total_due = round(amount + amount * interest / 100, 2)
             offers.append({
                 'interest': interest,
@@ -344,6 +345,10 @@ class LoanOfferAPIView(APIView):
             interest = Decimal(str(request.data.get('interest')))
             days = int(request.data.get('days'))
             amount = Decimal(str(request.data.get('amount')))
+            
+            # Map 40 working days back to 20 for database entry mapping
+            if days == 40:
+                days = 20
         except Exception:
             return Response({'error': 'Invalid parameters.'}, status=400)
 

@@ -543,8 +543,7 @@ class LoanOfferView(View):
             amount = 200
 
         offers = [
-            {"interest": 20, "days": 20},
-            {"interest": 25, "days": 25},
+            {"interest": 20, "days": 40},
         ]
 
         # Calculate repayment details
@@ -571,6 +570,10 @@ class LoanOfferView(View):
         interest = Decimal(request.POST.get("interest"))
         days = int(request.POST.get("days"))
         amount = Decimal(request.POST.get("amount"))
+
+        # Map 40 working days back to 20 for database entry mapping
+        if days == 40:
+            days = 20
 
         # 🔒 1. CHECK FOR ACTIVE LOAN
         has_active_loan = Loan.objects.filter(
