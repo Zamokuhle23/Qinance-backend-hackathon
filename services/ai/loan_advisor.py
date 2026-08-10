@@ -88,7 +88,28 @@ class LoanAdvisor:
             feature='loan_advisor', user_role='agent',
         )
         if not result['success']:
-            return {'success': False, 'error': result['error'], 'advice': None}
+            # Deterministic fallback — never leave the UI stuck on "Calculating dynamic limit..."
+            # Use the pre-calculated python_ceiling as the suggested amount when Gemini is unavailable.
+            fallback_advice = {
+                'explanation': (
+                    f"AI service temporarily unavailable. Based on the customer's deterministic "
+                    f"credit ceiling of E{python_ceiling:.2f}, a suggested loan amount of "
+                    f"E{python_ceiling:.2f} is recommended. This is a system-calculated fallback."
+                ),
+                'risk_summary': 'medium',
+                'suggested_loan_amount': python_ceiling,
+                'confidence': 50,
+                'reasons': ['AI service unavailable — using deterministic credit ceiling as fallback.'],
+                'strengths': [],
+                'weaknesses': [],
+            }
+            return {
+                'success': True,
+                'advice': fallback_advice,
+                'tokens': 0,
+                'latency_ms': 0,
+                'fallback': True,
+            }
 
         advice = result['data'] or {}
         
