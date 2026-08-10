@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block extra_head %}
+<style>
+  /* Gradient background */
+  body {
+    background: linear-gradient(135deg, #f5f7fa, #c3cfe2);
+  }
+
+  /* Card for customer list */
+  .customer-card {
+    background-color: #ffffffcc; /* slightly transparent white */
+    border-radius: 12px;
+    padding: 2rem;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .customer-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+  }
+
+  /* Table styling */
+  .customer-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1rem;
+  }
+  .customer-table th, .customer-table td {
+    padding: 0.75rem 1rem;
+    text-align: left;
+  }
+  .customer-table th {
+    background-color: #4e54c8;
+    color: white;
+    border-radius: 8px 8px 0 0;
+  }
+  .customer-table tr:nth-child(even) {
+    background-color: #f5f7fa;
+  }
+  .customer-table tr:hover {
+    background-color: #e6e6fa;
+  }
+
+  /* Headings */
+  h1 {
+    color: #333;
+    text-align: center;
+    margin-bottom: 1.5rem;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+  <div class="customer-card mx-auto" style="max-width: 800px;">
+    <h1>Customers</h1>
+    {% if customers %}
+      <table class="customer-table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Phone</th>
+            <th>Location</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for customer in customers %}
+          <tr>
+            <td>{{ customer.name }}</td>
+            <td>{{ customer.phone }}</td>
+            <td>{{ customer.location }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p class="text-muted text-center">No customers yet.</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

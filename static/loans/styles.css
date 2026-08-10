@@ -1,0 +1,168 @@
+/* loans/static/loans/styles.css */
+
+
+body {
+  background: linear-gradient(135deg, #f5f7fa, #c3cfe2);
+}
+
+.card {
+  border-radius: 12px;
+  transition: transform 0.2s, box-shadow 0.2s;
+  background-color: white;
+}
+
+.card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+}
+
+.table {
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.table thead {
+  background-color: rgba(0,0,0,0.05);
+}
+
+.btn-primary {
+  background: linear-gradient(45deg, #4e54c8, #8f94fb);
+  border: none;
+}
+
+.btn-primary:hover {
+  background: linear-gradient(45deg, #8f94fb, #4e54c8);
+}
+
+h3 {
+  color: #4e54c8;
+}
+
+/* Add other shared rules like badges, status colors, etc. */
+.status-green { background-color: #e6f4ea !important; }
+.status-yellow { background-color: #fff8e6 !important; }
+.status-red { background-color: #fdecea !important; }
+.badge-status-green { background-color: #28a745; color: white; }
+.badge-status-yellow { background-color: #ffc107; color: #212529; }
+.badge-status-red { background-color: #dc3545; color: white; }
+
+
+
+/* ========== Base Layout ========== */
+html, body {
+  height: 100%;
+  margin: 0;
+  font-family: 'Segoe UI', sans-serif;
+  background-color: #f8f9fa;
+  display: flex;
+  flex-direction: column;
+}
+
+main {
+  flex: 1;
+}
+
+/* ========== Navbar ========== */
+.navbar-brand {
+  font-weight: 700;
+  font-size: 1.3rem;
+}
+.navbar-light .navbar-nav .nav-link {
+  font-weight: 500;
+}
+
+/* ========== Cards ========== */
+.card {
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  margin-bottom: 1.5rem;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+}
+.card-title {
+  font-weight: 600;
+  color: #333;
+}
+
+/* ========== Tables ========== */
+.table thead {
+  background-color: #343a40;
+  color: #f8f9fa;
+}
+.table tbody tr:nth-child(odd) {
+  background-color: #f1f3f5;
+}
+.table tbody tr:hover {
+  background-color: #e9ecef;
+}
+.loan-table th, .loan-table td {
+  vertical-align: middle;
+}
+
+/* ========== Buttons ========== */
+.btn-primary {
+  background: linear-gradient(45deg, #4e54c8, #8f94fb);
+  border: none;
+  color: white;
+  transition: background 0.3s, transform 0.2s;
+}
+.btn-primary:hover {
+  background: linear-gradient(45deg, #8f94fb, #4e54c8);
+  transform: translateY(-2px);
+}
+.btn-success {
+  background: linear-gradient(45deg, #28a745, #71dd8a);
+  border: none;
+  color: white;
+  transition: transform 0.2s;
+}
+.btn-success:hover {
+  transform: translateY(-2px);
+}
+.btn-outline-primary {
+  border-radius: 50px;
+  transition: transform 0.2s, background 0.2s;
+}
+.btn-outline-primary:hover {
+  background: #4e54c8;
+  color: white;
+  transform: translateY(-2px);
+}
+
+/* ========== Status Rows ========== */
+.status-green { background-color: #d4edda !important; }
+.status-yellow { background-color: #fff3cd !important; }
+.status-red { background-color: #f8d7da !important; }
+
+.badge-status-green { background-color: #28a745; color: white; }
+.badge-status-yellow { background-color: #ffc107; color: #212529; }
+.badge-status-red { background-color: #dc3545; color: white; }
+
+/* ========== Footer ========== */
+footer {
+  background-color: #ffffff;
+  border-top: 1px solid #dee2e6;
+  padding: 1rem 0;
+  color: #6c757d;
+  font-size: 0.9rem;
+  flex-shrink: 0;
+}
+
+/* ========== Inputs ========== */
+.form-control {
+  border-radius: 6px;
+}
+
+/* ========== Dashboard Cards ========== */
+.stats-card {
+  border-radius: 12px;
+  padding: 1rem;
+  color: white;
+}
+.stats-card.customers { background-color: #0d6efd; }
+.stats-card.active-loans { background-color: #198754; }
+.stats-card.performance { background-color: #ffc107; color: #212529; }
+

@@ -1,0 +1,330 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Batch Collect — {{ today }}{% endblock %}
+
+{% block content %}
+<div id="page-body" class="container mt-3" style="padding-bottom: 90px;">
+
+  <!-- Header -->
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h4 class="mb-0">Batch Collection</h4>
+      <small class="text-muted">{{ today|date:"D, d M Y" }}</small>
+    </div>
+    <span id="online-badge" class="badge bg-secondary">...</span>
+  </div>
+
+  <!-- Restored session banner -->
+  <div id="restore-banner" class="alert alert-info alert-dismissible fade show" style="display:none" role="alert">
+    Previous selections restored. Review and submit when ready.
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  </div>
+
+  <!-- Result alert (shown after submit) -->
+  <div id="result-alert" style="display:none"></div>
+
+  {% if due_loans %}
+
+  <!-- Search -->
+  <div class="mb-3">
+    <input type="search" id="loan-search" class="form-control" placeholder="Search by name or phone…" autocomplete="off">
+  </div>
+
+  <!-- SELECTED SECTION -->
+  <div id="selected-section" style="display:none" class="mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+      <h6 class="mb-0 fw-bold text-success">
+        Selected &mdash; <span id="selected-count">0</span> loan(s)
+      </h6>
+      <button id="deselect-all-btn" class="btn btn-sm btn-outline-secondary">Deselect All</button>
+    </div>
+    <div id="selected-list"></div>
+  </div>
+
+  <!-- REMAINING SECTION -->
+  <div id="remaining-section">
+    <h6 class="mb-2 fw-bold text-muted">
+      Due Today &mdash; <span id="remaining-count">{{ due_loans|length }}</span> loan(s)
+    </h6>
+    <div id="remaining-list"></div>
+    <p id="no-remaining" class="text-muted text-center py-3" style="display:none">
+      All loans selected!
+    </p>
+  </div>
+
+  {% else %}
+  <div class="text-center py-5 text-muted">
+    <p class="mb-0">No loans due today.</p>
+    <a href="{% url 'loans:agent_dashboard' %}" class="btn btn-outline-primary mt-3">Back to Dashboard</a>
+  </div>
+  {% endif %}
+
+</div>
+
+<!-- STICKY SUBMIT BAR -->
+<div id="submit-bar" class="fixed-bottom bg-white border-top shadow-sm px-3 py-2" style="display:none">
+  <div class="container d-flex justify-content-between align-items-center">
+    <div>
+      <strong id="submit-count">0 payments</strong>
+      <div class="text-muted small">Total: <span id="submit-total">0.00</span> SZL</div>
+    </div>
+    <button id="submit-btn" class="btn btn-success btn-lg px-4">Submit All</button>
+  </div>
+</div>
+
+<!-- Loan data embedded for JS -->
+<script id="loans-data" type="application/json">
+[{% for loan in due_loans %}{"loan_id":{{ loan.id }},"customer":"{{ loan.customer.name|escapejs }}","phone":"{{ loan.customer.phone|escapejs }}","daily_payment":"{{ loan.daily_payment }}","remaining_balance":"{{ loan.remaining_balance }}","days_remaining":{{ loan.days_remaining_cached }}}{% if not forloop.last %},{% endif %}{% endfor %}]
+</script>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  const AGENT_ID = {{ agent.id }};
+  const TODAY    = '{{ today|date:"Y-m-d" }}';
+  const STORE_KEY  = 'mf_collect_' + AGENT_ID + '_' + TODAY;
+  const BATCH_URL  = '{% url "loans:batch_payment" %}';
+  const DASH_URL   = '{% url "loans:agent_dashboard" %}';
+
+  const ALL_LOANS = JSON.parse(document.getElementById('loans-data').textContent);
+  const LOAN_MAP  = {};
+  ALL_LOANS.forEach(l => { LOAN_MAP[l.loan_id] = l; });
+
+  let selOrder = [];
+  let amounts  = {};
+
+  function defaultAmounts() {
+    ALL_LOANS.forEach(l => { amounts[l.loan_id] = l.daily_payment; });
+  }
+
+  function loadState() {
+    defaultAmounts();
+    try {
+      const saved = JSON.parse(localStorage.getItem(STORE_KEY));
+      if (saved && Array.isArray(saved.selOrder) && saved.selOrder.length) {
+        selOrder = saved.selOrder.filter(id => LOAN_MAP[id]);
+        Object.assign(amounts, saved.amounts || {});
+        return true;
+      }
+    } catch (_) {}
+    return false;
+  }
+
+  function saveState() {
+    localStorage.setItem(STORE_KEY, JSON.stringify({ selOrder, amounts }));
+  }
+
+  function pruneOldKeys() {
+    const prefix = 'mf_collect_' + AGENT_ID + '_';
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith(prefix) && k !== STORE_KEY) localStorage.removeItem(k);
+    }
+  }
+
+  function isSelected(id) { return selOrder.includes(id); }
+
+  function selectLoan(id) {
+    if (!isSelected(id)) { selOrder.push(id); saveState(); render(); }
+  }
+
+  function deselectLoan(id) {
+    selOrder = selOrder.filter(x => x !== id);
+    saveState();
+    render();
+  }
+
+  function getTotal() {
+    return selOrder.reduce((s, id) => {
+      const v = parseFloat(amounts[id]);
+      return s + (isNaN(v) ? 0 : v);
+    }, 0);
+  }
+
+  function badge(loan) {
+    if (loan.days_remaining <= 0) return '<span class="badge bg-danger">Overdue</span>';
+    if (loan.days_remaining <= 5) return '<span class="badge bg-warning text-dark">' + loan.days_remaining + 'd left</span>';
+    return '<span class="badge bg-secondary">' + loan.days_remaining + 'd left</span>';
+  }
+
+  function makeCard(loan, selected) {
+    const amt    = amounts[loan.loan_id] || loan.daily_payment;
+    const border = selected ? 'border-success' : 'border-light';
+    const check  = selected ? 'checked' : '';
+    return `
+<div class="card mb-2 border ${border}" id="card-${loan.loan_id}">
+  <div class="card-body py-2 px-3">
+    <div class="d-flex align-items-center gap-3">
+      <div class="flex-shrink-0">
+        <input class="form-check-input loan-chk" type="checkbox" ${check}
+          id="chk-${loan.loan_id}" data-loan-id="${loan.loan_id}"
+          style="width:22px;height:22px;cursor:pointer">
+      </div>
+      <label class="flex-grow-1 mb-0" for="chk-${loan.loan_id}" style="cursor:pointer;min-width:0">
+        <div class="fw-bold">${loan.customer}</div>
+        <div class="text-muted small">${loan.phone} &nbsp; ${badge(loan)}</div>
+      </label>
+      <div class="flex-shrink-0" style="width:96px">
+        <input type="number" class="form-control form-control-sm text-center amt-input"
+          step="0.01" min="0.01" value="${amt}"
+          data-loan-id="${loan.loan_id}">
+        <div class="text-muted text-center" style="font-size:0.68rem">SZL</div>
+      </div>
+    </div>
+  </div>
+</div>`;
+  }
+
+  function render() {
+    const q = (document.getElementById('loan-search').value || '').toLowerCase();
+    const matches = l => !q || l.customer.toLowerCase().includes(q) || l.phone.includes(q);
+
+    const selLoans = selOrder.map(id => LOAN_MAP[id]).filter(Boolean).filter(matches);
+    const remLoans = ALL_LOANS.filter(l => !isSelected(l.loan_id)).filter(matches);
+
+    const selSection = document.getElementById('selected-section');
+    selSection.style.display = selLoans.length ? 'block' : 'none';
+    document.getElementById('selected-count').textContent = selLoans.length;
+    document.getElementById('selected-list').innerHTML = selLoans.map(l => makeCard(l, true)).join('');
+
+    document.getElementById('remaining-count').textContent = remLoans.length;
+    document.getElementById('remaining-list').innerHTML = remLoans.map(l => makeCard(l, false)).join('');
+    document.getElementById('no-remaining').style.display =
+      (ALL_LOANS.length && !remLoans.length) ? 'block' : 'none';
+
+    const bar = document.getElementById('submit-bar');
+    bar.style.display = selLoans.length ? 'flex' : 'none';
+    document.getElementById('submit-count').textContent =
+      selLoans.length + ' payment' + (selLoans.length !== 1 ? 's' : '');
+    document.getElementById('submit-total').textContent = getTotal().toFixed(2);
+  }
+
+  const body = document.getElementById('page-body');
+
+  body.addEventListener('change', function (e) {
+    const chk = e.target.closest('.loan-chk');
+    if (!chk) return;
+    const id = parseInt(chk.dataset.loanId, 10);
+    chk.checked ? selectLoan(id) : deselectLoan(id);
+  });
+
+  body.addEventListener('input', function (e) {
+    const inp = e.target.closest('.amt-input');
+    if (!inp) return;
+    const id  = parseInt(inp.dataset.loanId, 10);
+    amounts[id] = inp.value.trim();
+    saveState();
+    document.getElementById('submit-total').textContent = getTotal().toFixed(2);
+  });
+
+  body.addEventListener('blur', function (e) {
+    const inp = e.target.closest('.amt-input');
+    if (!inp) return;
+    const id  = parseInt(inp.dataset.loanId, 10);
+    const val = parseFloat(inp.value);
+    if (!isNaN(val) && val > 0 && !isSelected(id)) {
+      selectLoan(id);
+    }
+  }, true);
+
+  document.getElementById('deselect-all-btn').addEventListener('click', function () {
+    selOrder = [];
+    defaultAmounts();
+    saveState();
+    render();
+  });
+
+  function updateOnline() {
+    const badge = document.getElementById('online-badge');
+    if (navigator.onLine) {
+      badge.className = 'badge bg-success';
+      badge.textContent = 'Online';
+    } else {
+      badge.className = 'badge bg-warning text-dark';
+      badge.textContent = 'Offline — saved locally';
+    }
+  }
+  window.addEventListener('online',  updateOnline);
+  window.addEventListener('offline', updateOnline);
+  updateOnline();
+
+  function getCsrf() {
+    for (const part of document.cookie.split(';')) {
+      const [k, v] = part.trim().split('=');
+      if ((k || '').trim() === 'csrftoken') return decodeURIComponent(v || '');
+    }
+    return '';
+  }
+
+  function showAlert(html, type) {
+    const el = document.getElementById('result-alert');
+    el.className = 'alert alert-' + type;
+    el.innerHTML = html;
+    el.style.display = 'block';
+    el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  document.getElementById('submit-btn').addEventListener('click', async function () {
+    if (!selOrder.length) return;
+
+    if (!navigator.onLine) {
+      showAlert('You are offline. Selections are saved — open this page when back online and submit then.', 'warning');
+      return;
+    }
+
+    const bad = selOrder.find(id => { const v = parseFloat(amounts[id]); return isNaN(v) || v <= 0; });
+    if (bad) {
+      showAlert('One or more amounts are invalid. Fix them and try again.', 'danger');
+      return;
+    }
+
+    const btn = this;
+    btn.disabled = true;
+    btn.textContent = 'Submitting…';
+
+    try {
+      const payload = selOrder.map(id => ({ loan_id: id, amount: parseFloat(amounts[id]).toFixed(2) }));
+      const res  = await fetch(BATCH_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrf() },
+        body: JSON.stringify({ payments: payload }),
+      });
+      const data = await res.json();
+
+      const ok      = data.results.filter(r => r.status === 'ok');
+      const skipped = data.results.filter(r => r.status === 'skipped');
+      const errors  = data.results.filter(r => r.status === 'error');
+
+      const okIds = new Set(ok.map(r => r.loan_id));
+      selOrder = selOrder.filter(id => !okIds.has(id));
+      saveState();
+
+      let msg = '';
+      if (ok.length)      msg += `<strong>${ok.length} payment(s) recorded</strong> &mdash; ${data.total_amount} SZL.<br>`;
+      if (skipped.length) msg += `${skipped.length} skipped (payment cooldown active).<br>`;
+      if (errors.length)  msg += `${errors.length} failed.<br>`;
+
+      showAlert(msg, ok.length ? 'success' : 'warning');
+      render();
+
+      if (!selOrder.length) setTimeout(() => { window.location.href = DASH_URL; }, 1800);
+
+    } catch (_) {
+      showAlert('Network error — selections are still saved. Reopen this page when the connection is stable.', 'danger');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Submit All';
+    }
+  });
+
+  document.getElementById('loan-search').addEventListener('input', render);
+
+  pruneOldKeys();
+  const hadSaved = loadState();
+  render();
+  if (hadSaved) document.getElementById('restore-banner').style.display = 'block';
+
+}());
+</script>
+{% endblock %}

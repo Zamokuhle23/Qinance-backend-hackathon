@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Manage Agents{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <h3>Manage Agents</h3>
+
+  <!-- Generate Invite Link -->
+  <form method="post" action="{% url 'loans:generate_agent_invite' %}" class="mb-3">
+    {% csrf_token %}
+    <button class="btn btn-primary">Generate Registration Link</button>
+  </form>
+
+  {% if messages %}
+    {% for message in messages %}
+      <div class="alert alert-info">{{ message }}</div>
+    {% endfor %}
+  {% endif %}
+
+  <!-- Agent List -->
+  <div class="card mt-3">
+    <div class="card-body">
+      <h5>Existing Agents</h5>
+      <table class="table table-bordered">
+        <thead>
+          <tr>
+            <th>Username</th>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Joined</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for agent in agents %}
+          <tr>
+              <td>
+              <a href="{% url 'loans:agent_detail' agent.id %}">
+                {{ agent.user.username }}
+              </a>
+            </td>
+            
+              <td>
+              <a href="{% url 'loans:agent_detail' agent.id %}">
+                {{ agent.user.get_full_name }}
+              </a>
+            </td>
+            <td>{{ agent.user.email }}</td>
+            <td>{{ agent.user.date_joined|date:"Y-m-d" }}</td>
+            <td>
+              <a href="{% url 'loans:edit_agent' agent.id %}" class="btn btn-sm btn-warning">Edit</a>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="6" class="text-center text-muted">No agents found.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

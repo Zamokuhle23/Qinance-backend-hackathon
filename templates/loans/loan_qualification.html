@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Loan Qualification - {{ customer.name }}{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/style.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+  <div class="card shadow-sm p-4">
+    <h3 class="mb-3">Loan Qualification</h3>
+    <p>
+      <strong>Customer:</strong> {{ customer.name }}<br>
+      <strong>Phone:</strong> {{ customer.phone }}<br>
+      <strong>Location:</strong> {{ customer.location|default:"—" }}
+    </p>
+
+    <hr>
+    <p>Based on repayment history, {{ customer.name }} currently qualifies for:</p>
+    <h4 class="text-success">{{ lower }} - {{ upper }} SZL</h4>
+
+    <form method="get" action="{% url 'loans:loan_offer' customer.id %}" class="mt-4">
+      <label for="amount" class="form-label">Select Loan Amount</label>
+      <input type="number" id="amount" name="amount" class="form-control" min="{{ lower }}" max="{{ upper }}" required>
+      <button type="submit" class="btn btn-primary mt-3">View Loan Offers</button>
+    </form>
+
+    <a href="{% url 'loans:agent_dashboard' %}" class="btn btn-outline-primary mt-3">Back to Dashboard</a>
+  </div>
+</div>
+{% endblock %}

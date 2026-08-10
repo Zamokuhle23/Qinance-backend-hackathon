@@ -1,0 +1,106 @@
+:root {
+  --brand: #4f46e5;
+  --muted: #6b7280;
+  --success: #10b981;
+  --danger: #ef4444;
+  --warning: #f59e0b;
+  --card-bg: #ffffff;
+  --card-shadow: 0 6px 18px rgba(15, 23, 42, 0.06);
+}
+
+/* General page styling */
+body {
+  font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  background-color: #f6f8fb;
+  color: #111827;
+}
+
+/* Card styling */
+.card {
+  border: none;
+  border-radius: 12px;
+  box-shadow: var(--card-shadow);
+}
+
+/* Table styling */
+.loan-table {
+  background: var(--card-bg);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.loan-table thead th {
+  background: linear-gradient(180deg, #fbfdff, #f1f5f9);
+  color: #111827;
+  font-weight: 600;
+  border-bottom: 0;
+}
+
+.loan-table tbody tr td {
+  vertical-align: middle;
+}
+
+/* Row status highlights */
+.status-green { background-color: #ecfdf5 !important; }
+.status-yellow { background-color: #fffbeb !important; }
+.status-red { background-color: #fff1f2 !important; }
+
+/* Badges */
+.badge-status-green { background: var(--success); color: white; padding: .35rem .55rem; border-radius: .5rem; }
+.badge-status-yellow { background: var(--warning); color: #111827; padding: .35rem .55rem; border-radius: .5rem; }
+.badge-status-red { background: var(--danger); color: white; padding: .35rem .55rem; border-radius: .5rem; }
+
+/* Buttons */
+.btn-primary {
+  background: linear-gradient(90deg, var(--brand), #6366f1);
+  border: none;
+  box-shadow: none;
+}
+
+/* Subtle hover for tables */
+.loan-table tbody tr:hover {
+  transform: translateY(-2px);
+  transition: all .12s ease;
+  box-shadow: 0 6px 20px rgba(17,24,39,0.04);
+}
+
+
+
+html, body {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+}
+
+main {
+  flex: 1; /* take remaining space */
+}
+
+footer {
+  flex-shrink: 0; /* footer stays at bottom */
+}
+
+
+
+/* Responsive tweaks */
+@media (max-width: 767px) {
+  .loan-table thead { display: none; }
+  .loan-table tbody td { display: block; width: 100%; }
+  .loan-table tbody tr { margin-bottom: 12px; display: block; border-radius: 8px; }
+}
+.loan-table {
+    table-layout: auto;
+    width: 100%;
+}
+
+.loan-table th.customer-note-col,
+.loan-table td.customer-note-col {
+    min-width: 520px;
+    max-width: 640px;
+    white-space: normal;
+    word-wrap: break-word;
+}

@@ -1,0 +1,466 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Dashboard - {{ agent.user.username }}{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/style.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+
+  <!-- Header -->
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h3 class="mb-0">{{ agent.user.get_full_name|default:agent.user.username }}'s Dashboard</h3>
+      <small class="text-muted">Region: {{ agent.region|default:"—" }}</small>
+    </div>
+    <div class="text-end">
+      <div class="mb-1">Performance today</div>
+      <div class="h4 mb-0">{{ performance }}%</div>
+    </div>
+  </div>
+
+  <!-- Daily Collection Overview -->
+<div class="row mb-4">
+  <!-- Amount Collected Today -->
+  <div class="col-md-4">
+    <div class="card">
+      <div class="card-body">
+        <h6 class="card-subtitle mb-2 text-muted">Amount Collected Today</h6>
+        <p class="mb-1">
+          {{ amount_collected|floatformat:2 }} / {{ amount_to_collect|floatformat:2 }} SZL
+        </p>
+        <div class="progress" style="height: 20px;">
+          <div
+            class="progress-bar bg-success"
+            role="progressbar"
+            style="width: {{ amount_collection_percentage|default:0 }}%;"
+            aria-valuenow="{{ amount_collection_percentage|default:0 }}"
+            aria-valuemin="0"
+            aria-valuemax="100"
+          >
+            {{ amount_collection_percentage|default:0 }}%
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Amount in Hand -->
+  <div class="col-md-4">
+    <div class="card bg-light border">
+      <div class="card-body text-center">
+        <h6 class="card-subtitle mb-2 text-muted">Amount in Hand</h6>
+        <h4 class="fw-bold text-success">{{ amount_in_hand|floatformat:2 }} SZL</h4>
+        <small class="text-muted">Total unremitted funds currently held</small>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loans Collected Today -->
+  <div class="col-md-4">
+    <div class="card">
+      <div class="card-body">
+        <h6 class="card-subtitle mb-2 text-muted">Loans Collected Today</h6>
+        <p class="mb-1">
+          {{ loans_collected_count }} / {{ total_due_loans }} loans
+        </p>
+        <div class="progress" style="height: 20px;">
+          <div
+            class="progress-bar bg-info"
+            role="progressbar"
+            style="width: {{ loan_collection_percentage|default:0 }}%;"
+            aria-valuenow="{{ loan_collection_percentage|default:0 }}"
+            aria-valuemin="0"
+            aria-valuemax="100"
+          >
+            {{ loan_collection_percentage|default:0 }}%
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4">
+
+  <!-- Send to Admin Section -->
+  <div class="col-md-6">
+    <div class="card h-100">
+      <div class="card-body">
+        <h5 class="mb-3">Send Money to Admin</h5>
+
+        <form method="post" action="{% url 'loans:send_to_admin' %}">
+          {% csrf_token %}
+          <div class="mb-3">
+            <label for="send_amount" class="form-label">Amount to Send</label>
+            <input type="number" step="0.01" min="0" name="amount" id="send_amount" class="form-control" required>
+          </div>
+          <button type="submit" class="btn btn-primary w-100">Send</button>
+        </form>
+
+        <p class="mt-3 text-muted">
+          Note: Once submitted, the admin must approve before your balance is reduced.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Withdraw Section -->
+  <div class="col-md-6">
+    <div class="card h-100">
+      <div class="card-body">
+        <h5 class="mb-3">Withdraw Money</h5>
+
+        <form method="post" action="{% url 'loans:admin_give_agent_money' agent.id %}">
+          {% csrf_token %}
+          <div class="mb-3">
+            <label for="withdraw_note" class="form-label">Note</label>
+            <textarea name="note" id="withdraw_note" class="form-control" rows="2" placeholder="Enter a note (optional)"></textarea>
+          </div>
+          <div class="mb-3">
+            <label for="withdraw_amount" class="form-label">Amount to Withdraw</label>
+            <input type="number" step="0.01" min="0" name="amount" id="withdraw_amount" class="form-control" required>
+          </div>
+          <button type="submit" class="btn btn-warning w-100">Withdraw</button>
+        </form>
+
+      </div>
+    </div>
+  </div>
+
+</div>
+
+
+
+  <!-- Customer Search -->
+  <div class="card mb-4">
+    <div class="card-body">
+      <h5 class="card-title">Search Customer</h5>
+      <form method="get" class="row g-2 mb-3">
+        <div class="col-md-5">
+          <input type="text" name="name" class="form-control" placeholder="Search by name" value="{{ request.GET.name }}">
+        </div>
+        <div class="col-md-5">
+          <input type="text" name="phone" class="form-control" placeholder="Search by phone" value="{{ request.GET.phone }}">
+        </div>
+        <div class="col-md-2">
+          <button type="submit" class="btn btn-primary w-100">Search</button>
+        </div>
+      </form>
+
+      {% if searched %}
+        {% if customers %}
+          <div class="table-responsive scrollable-table">
+            <table class="table table-bordered loan-table">
+              <thead class="table-light">
+                <tr>
+                  <th>Name</th>
+                  <th>Phone</th>
+                  <th>Total Loans</th>
+                  <th>Location</th>
+                  <th>Loan Qualification</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for customer in customers %}
+                <tr>
+                  <td>{{ customer.name }}</td>
+                  <td>{{ customer.phone }}</td>
+                  <td>{{ customer.total_loans }}</td>
+                  <td>{{ customer.location|default:"—" }}</td>
+                  <td>
+                    <a href="{% url 'loans:loan_qualification' customer.id %}" class="btn btn-sm btn-outline-primary">
+                      View Qualification
+                    </a>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <p class="text-muted mb-0">No customer found with that name/phone.</p>
+          <a href="{% url 'loans:create_customer_loan' %}" class="btn btn-primary mt-2">
+            Add New Customer & Loan
+          </a>
+        {% endif %}
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Loans Due Today -->
+  <div class="card mb-4">
+    <div class="card-body">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <h5 class="card-title mb-0">Loans Due Today</h5>
+        <a href="{% url 'loans:batch_collect' %}" class="btn btn-primary btn-sm">Batch Collect</a>
+      </div>
+      <input type="search" id="due-search" class="form-control form-control-sm mb-2" placeholder="Search by name or phone…" autocomplete="off">
+      {% if due_loans %}
+        <div class="table-responsive scrollable-table">
+          <table class="table table-bordered loan-table">
+            <thead class="table-light">
+              <tr>
+                <th>Customer</th>
+                <th>Loan</th>
+                <th>Daily</th>
+                <!-- <th>Total Paid</th> -->
+                <th>Remaining</th>
+                <!-- <th class="customer-note-col">Customer Note</th> -->
+                <th>Days Left</th>
+                <th>Status</th>
+                <th class="text-center">Action</th>
+              </tr>
+            </thead>
+            <tbody id="due-loans-tbody">
+              {% for loan in due_loans %}
+              {% with color=loan.payment_status_color %}
+              <tr class="{% if color == 'green' %}status-green{% elif color == 'yellow' %}status-yellow{% else %}status-red{% endif %}">
+                <td>
+                  <a href="{% url 'loans:customer_history' loan.customer.id %}"><strong>{{ loan.customer.name }}</strong></a><br>
+                  <small class="text-muted">{{ loan.customer.phone }}</small>
+                </td>
+                <td>{{ loan.principal_amount }} SZL</td>
+                <td>{{ loan.daily_payment }} SZL</td>
+                <!-- <td>{{ loan.total_paid|default:"0.00" }} SZL</td> -->
+                 
+                <td>{{ loan.remaining_balance|default:loan.total_due }} SZL</td>
+                <!-- <td class="customer-note-col">
+                    {{ loan.get_customer_warning|default:"—" }}
+                </td> -->
+                <td>
+                  {% if loan.days_remaining_cached == 0 %}
+                    <span class="badge bg-danger">Overdue</span>
+                  {% elif loan.days_remaining_cached == 1 %}
+                    <span class="badge bg-warning text-dark">1 day</span>
+                  {% elif loan.days_remaining_cached <= 5 %}
+                    <span class="badge bg-warning text-dark">{{ loan.days_remaining_cached }} days</span>
+                  {% else %}
+                    <span class="badge bg-secondary">{{ loan.days_remaining_cached }} days</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if color == 'green' %}<span class="badge badge-status-green">OK</span>
+                  {% elif color == 'yellow' %}<span class="badge badge-status-yellow">Warning</span>
+                  {% else %}<span class="badge badge-status-red">Default</span>{% endif %}
+                </td>
+                <td class="text-center">
+                  <form method="post" action="{% url 'loans:mark_payment' loan.id %}" class="d-flex flex-column align-items-center gap-1">
+                    {% csrf_token %}
+                    <input type="number" name="amount" step="0.01" min="0" class="form-control form-control-sm text-center" placeholder="Enter amount (optional)" style="max-width: 130px;">
+                    <button class="btn btn-sm btn-success w-100" type="submit">Mark Paid</button>
+                  </form>
+                </td>
+              </tr>
+              {% endwith %}
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <p class="text-muted mb-0">No loans due today.</p>
+      {% endif %}
+
+      <!-- All Active Loans Collapse -->
+      <div class="mt-2">
+        <button class="btn btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#allActiveLoans" aria-expanded="false" aria-controls="allActiveLoans">
+          Show Loans Paid Today
+        </button>
+      </div>
+      <div class="collapse mt-3" id="allActiveLoans">
+        {% if loans %}
+        <div class="table-responsive scrollable-table">
+          <table class="table table-bordered loan-table">
+            <thead class="table-light">
+              <tr>
+                <th>Customer</th>
+                <th>Loan</th>
+                <th>Daily</th>
+                <th>Paid Today</th>
+                <th>Remaining</th>
+                <th>Days Left</th>
+                <th>Status</th>
+                <th class="text-center">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for loan in loans %}
+              {% with color=loan.payment_status_color %}
+              <tr class="{% if color == 'green' %}status-green{% elif color == 'yellow' %}status-yellow{% else %}status-red{% endif %}">
+                <td>
+                  <a href="{% url 'loans:customer_history' loan.customer.id %}"><strong>{{ loan.customer.name }}</strong></a><br>
+                  <small class="text-muted">{{ loan.customer.phone }}</small>
+                </td>
+                <td>{{ loan.principal_amount }} SZL</td>
+                <td>{{ loan.daily_payment }} SZL</td>
+                <td>
+                  {% if loan.amount_paid_today %}
+                    {{ loan.amount_paid_today }} SZL
+                  {% else %}
+                    0 SZL
+                  {% endif %}
+                </td>
+                <td>{{ loan.remaining_balance }} SZL</td>
+                <td>
+                  {% if loan.days_remaining_cached == 0 %}
+                    <span class="badge bg-danger">Overdue</span>
+                  {% elif loan.days_remaining_cached == 1 %}
+                    <span class="badge bg-warning text-dark">1 day</span>
+                  {% elif loan.days_remaining_cached <= 5 %}
+                    <span class="badge bg-warning text-dark">{{ loan.days_remaining_cached }} days</span>
+                  {% else %}
+                    <span class="badge bg-secondary">{{ loan.days_remaining_cached }} days</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if color == 'green' %}<span class="badge badge-status-green">OK</span>
+                  {% elif color == 'yellow' %}<span class="badge badge-status-yellow">Warning</span>
+                  {% else %}<span class="badge badge-status-red">Default</span>{% endif %}
+                </td>
+                <td class="text-center">
+                  {% if not loan.payment_cooldown_active %}
+                    <form method="post" action="{% url 'loans:mark_payment' loan.id %}" class="payment-form">
+                      {% csrf_token %}
+                      <input type="number" name="amount" value="{{ loan.daily_payment }}" step="0.01" min="0" style="width:80px;">
+                      <button class="btn btn-sm btn-success" type="submit">
+                        Mark Paid
+                      </button>
+                    </form>
+                  {% else %}
+                    <button class="btn btn-sm btn-warning" disabled>
+                      Processing...
+                    </button>
+                  {% endif %}
+
+                    <!-- Reverse Payment Button -->
+                    <form method="post" action="{% url 'loans:reverse_payment' loan.id %}">
+                      {% csrf_token %}
+                      <button class="btn btn-sm btn-danger w-100">
+                        Reverse Today
+                      </button>
+                    </form>
+                    
+                </td>
+
+              </tr>
+              {% endwith %}
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <p class="text-muted mb-0">No active loans.</p>
+        {% endif %}
+      </div>
+
+    </div>
+  </div>
+
+  <div class="mt-2">
+    <button class="btn btn-outline-success" type="button"
+            data-bs-toggle="collapse"
+            data-bs-target="#loansTakenToday"
+            aria-expanded="false"
+            aria-controls="loansTakenToday">
+      Show Loans Taken Today
+    </button>
+  </div>
+
+  <div class="collapse mt-3" id="loansTakenToday">
+    {% if loans_taken_today %}
+
+    <p><strong>Total Given Today:</strong> {{ total_loans_taken_today }} SZL</p>
+
+    <div class="table-responsive scrollable-table">
+      <table class="table table-bordered loan-table">
+        <thead class="table-light">
+          <tr>
+            <th>Customer</th>
+            <th>Loan Amount</th>
+            <th>Daily Payment</th>
+            <th>Start Date</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for loan in loans_taken_today %}
+          <tr>
+            <td>
+              <strong>{{ loan.customer.name }}</strong><br>
+              <small class="text-muted">{{ loan.customer.phone }}</small>
+            </td>
+            <td>{{ loan.principal_amount }} SZL</td>
+            <td>{{ loan.daily_payment }} SZL</td>
+            <td>{{ loan.start_date }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% else %}
+      <p class="text-muted mb-0">No loans taken today.</p>
+    {% endif %}
+  </div>
+
+  <!-- Stats -->
+  <div class="row">
+    <div class="col-md-4">
+      <div class="card text-center">
+        <div class="card-body">
+          <h6 class="card-subtitle mb-2 text-muted">Total Customers</h6>
+          <div class="h4">{{ total_customers }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card text-center">
+        <div class="card-body">
+          <h6 class="card-subtitle mb-2 text-muted">Active Loans</h6>
+          <div class="h4">{{ loans|length }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card text-center">
+        <div class="card-body">
+          <h6 class="card-subtitle mb-2 text-muted">Performance Today</h6>
+          <div class="h4">{{ performance }}%</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+  // Scroll preservation
+  let scrollPosition = 0;
+  document.querySelectorAll('.payment-form').forEach(form => {
+    form.addEventListener('submit', function() {
+      localStorage.setItem('scrollPosition', window.scrollY);
+    });
+  });
+  const savedPosition = localStorage.getItem('scrollPosition');
+  if (savedPosition) {
+    window.scrollTo(0, parseInt(savedPosition));
+    localStorage.removeItem('scrollPosition');
+  }
+
+  // Live search for Loans Due Today table
+  const searchInput = document.getElementById('due-search');
+  if (searchInput) {
+    searchInput.addEventListener('input', function() {
+      const q = this.value.toLowerCase();
+      document.querySelectorAll('#due-loans-tbody tr').forEach(row => {
+        row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+      });
+    });
+  }
+});
+</script>
+{% endblock %}

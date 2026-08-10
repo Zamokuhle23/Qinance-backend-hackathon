@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}{{ status|title }} Loans - {{ agent.user.get_full_name }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <h4>{{ status|title }} Loans for {{ agent.user.get_full_name }}</h4>
+
+  <table class="table table-striped mt-3">
+    <thead>
+      <tr>
+        <th>Customer</th>
+        <th>Loan Date</th>
+        <th>Principal</th>
+        <th>Total Due</th>
+        <th>Paid</th>
+        <th>Balance</th>
+        <th>Status</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for loan in loans %}
+      <tr>
+        <td>
+          <a href="{% url 'loans:customer_history_with_loan' loan.customer.id loan.id %}"><strong>{{ loan.customer.name }}</strong></a><br>
+        </td>
+        <td>{{ loan.start_date }}</td>
+        <td>{{ loan.principal_amount }} SZL</td>
+        <td>{{ loan.total_due }} SZL</td>
+        <td>{{ loan.total_paid }} SZL</td>
+        <td>{{ loan.remaining_balance }} SZL</td>
+        <td>
+          <span class="badge bg-secondary">{{ loan.status }}</span>
+        </td>
+        <td>
+          <form method="post"
+                action="{% url 'loans:delete_loan' loan.id %}"
+                onsubmit="return confirm('Delete this loan? This action cannot be undone.');">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-sm btn-danger">
+              Delete
+            </button>
+          </form>
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="8" class="text-center">No loans found</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <a href="{% url 'loans:admin_agents' %}" class="btn btn-secondary">Back</a>
+</div>
+{% endblock %}

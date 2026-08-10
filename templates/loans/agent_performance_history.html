@@ -1,0 +1,195 @@
+{% extends "base.html" %}
+{% block title %}Performance History — {{ agent.user.get_full_name|default:agent.user.username }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+
+  <!-- Header -->
+  <div class="d-flex align-items-center justify-content-between mb-4">
+    <div>
+      <h4 class="mb-0">Performance History</h4>
+      <small class="text-muted">{{ agent.user.get_full_name|default:agent.user.username }}</small>
+    </div>
+    <a href="{% url 'loans:agent_detail' agent.id %}" class="btn btn-sm btn-outline-secondary">&larr; Back</a>
+  </div>
+
+  <!-- Period selector -->
+  <div class="mb-4">
+    <div class="btn-group" role="group">
+      <a href="?period=week" class="btn btn-sm {% if period == 'week' %}btn-dark{% else %}btn-outline-secondary{% endif %}">By Week</a>
+      <a href="?period=month" class="btn btn-sm {% if period == 'month' %}btn-dark{% else %}btn-outline-secondary{% endif %}">By Month</a>
+      <a href="?period=all" class="btn btn-sm {% if period == 'all' %}btn-dark{% else %}btn-outline-secondary{% endif %}">All</a>
+    </div>
+  </div>
+
+  <!-- Overall totals summary -->
+  {% if totals.total_gross %}
+  <div class="row g-3 mb-4">
+    <div class="col-4">
+      <div class="card text-center">
+        <div class="card-body py-3">
+          <small class="text-muted d-block">Total Gross</small>
+          <span class="fw-bold text-success">{{ totals.total_gross|floatformat:2 }} SZL</span>
+        </div>
+      </div>
+    </div>
+    <div class="col-4">
+      <div class="card text-center">
+        <div class="card-body py-3">
+          <small class="text-muted d-block">Total Withdrawn</small>
+          <span class="fw-bold text-danger">{{ totals.total_withdrawn|floatformat:2 }} SZL</span>
+        </div>
+      </div>
+    </div>
+    <div class="col-4">
+      <div class="card text-center">
+        <div class="card-body py-3">
+          <small class="text-muted d-block">Total Net</small>
+          {% if totals.total_net >= 0 %}
+            <span class="fw-bold text-success">{{ totals.total_net|floatformat:2 }} SZL</span>
+          {% else %}
+            <span class="fw-bold text-danger">{{ totals.total_net|floatformat:2 }} SZL</span>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Grouped view (week / month) -->
+  {% if groups %}
+    {% for group in groups %}
+    <div class="card mb-4">
+      <div class="card-body">
+        <div class="d-flex align-items-center justify-content-between mb-3">
+          <h6 class="card-title mb-0">{{ group.label }}</h6>
+          <div class="text-end small">
+            <span class="text-success me-3">Gross: {{ group.gross|floatformat:2 }} SZL</span>
+            <span class="text-danger me-3">Withdrawn: {{ group.withdrawn|floatformat:2 }} SZL</span>
+            {% if group.net >= 0 %}
+              <span class="fw-bold text-success">Net: {{ group.net|floatformat:2 }} SZL</span>
+            {% else %}
+              <span class="fw-bold text-danger">Net: {{ group.net|floatformat:2 }} SZL</span>
+            {% endif %}
+          </div>
+        </div>
+        <table class="table table-hover mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>Date</th>
+              <th>Gross Interest</th>
+              <th>Withdrawn</th>
+              <th>Net</th>
+              <th>Performance</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for p in group.rows %}
+            <tr>
+              <td class="text-nowrap">{{ p.date|date:"D, d M Y" }}</td>
+              <td class="text-success">{{ p.gross_interest|floatformat:2 }} SZL</td>
+              <td class="text-danger">{{ p.total_withdrawn|floatformat:2 }} SZL</td>
+              <td>
+                {% if p.net >= 0 %}
+                  <span class="fw-bold text-success">{{ p.net|floatformat:2 }} SZL</span>
+                {% else %}
+                  <span class="fw-bold text-danger">{{ p.net|floatformat:2 }} SZL</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if p.collection_percentage >= 80 %}
+                  <span class="badge bg-success">{{ p.collection_percentage }}%</span>
+                {% elif p.collection_percentage >= 50 %}
+                  <span class="badge bg-warning text-dark">{{ p.collection_percentage }}%</span>
+                {% else %}
+                  <span class="badge bg-danger">{{ p.collection_percentage }}%</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% endfor %}
+
+  <!-- Flat "all" view -->
+  {% elif rows %}
+  <div class="card mb-4">
+    <div class="card-body p-0">
+      <table class="table table-hover mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>Date</th>
+            <th>Gross Interest</th>
+            <th>Withdrawn</th>
+            <th>Net</th>
+            <th>Performance</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for p in rows %}
+          <tr>
+            <td class="text-nowrap">{{ p.date|date:"D, d M Y" }}</td>
+            <td class="text-success">{{ p.gross_interest|floatformat:2 }} SZL</td>
+            <td class="text-danger">{{ p.total_withdrawn|floatformat:2 }} SZL</td>
+            <td>
+              {% if p.net >= 0 %}
+                <span class="fw-bold text-success">{{ p.net|floatformat:2 }} SZL</span>
+              {% else %}
+                <span class="fw-bold text-danger">{{ p.net|floatformat:2 }} SZL</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if p.collection_percentage >= 80 %}
+                <span class="badge bg-success">{{ p.collection_percentage }}%</span>
+              {% elif p.collection_percentage >= 50 %}
+                <span class="badge bg-warning text-dark">{{ p.collection_percentage }}%</span>
+              {% else %}
+                <span class="badge bg-danger">{{ p.collection_percentage }}%</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  {% else %}
+  <div class="card">
+    <div class="card-body text-center text-muted py-5">
+      No performance data recorded yet.
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Pagination -->
+  {% if page_obj.paginator.num_pages > 1 %}
+  <nav class="d-flex justify-content-center mt-3">
+    <ul class="pagination">
+      {% if page_obj.has_previous %}
+        <li class="page-item">
+          <a class="page-link" href="?period={{ period }}&page={{ page_obj.previous_page_number }}">&laquo; Newer</a>
+        </li>
+      {% else %}
+        <li class="page-item disabled"><span class="page-link">&laquo; Newer</span></li>
+      {% endif %}
+
+      <li class="page-item disabled">
+        <span class="page-link text-muted">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+      </li>
+
+      {% if page_obj.has_next %}
+        <li class="page-item">
+          <a class="page-link" href="?period={{ period }}&page={{ page_obj.next_page_number }}">Older &raquo;</a>
+        </li>
+      {% else %}
+        <li class="page-item disabled"><span class="page-link">Older &raquo;</span></li>
+      {% endif %}
+    </ul>
+  </nav>
+  {% endif %}
+
+</div>
+{% endblock %}

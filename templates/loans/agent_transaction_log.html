@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Transaction Log — {{ agent.user.username }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+
+  <div class="d-flex align-items-center justify-content-between mb-3">
+    <div>
+      <h4 class="mb-0">Transaction Log</h4>
+      <small class="text-muted">{{ agent.user.get_full_name|default:agent.user.username }}</small>
+    </div>
+    <a href="{% url 'loans:agent_detail' agent.id %}" class="btn btn-sm btn-outline-secondary">
+      &larr; Back to Agent
+    </a>
+  </div>
+
+  {% if logs %}
+  <div class="card">
+    <div class="card-body p-0">
+      <table class="table table-hover mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>Date</th>
+            <th>Type</th>
+            <th>Requested</th>
+            <th>Actual</th>
+            <th>Approved By</th>
+            <th>Note</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for log in logs %}
+          <tr>
+            <td class="text-nowrap">{{ log.approved_at|date:"d M Y, H:i" }}</td>
+            <td>
+              {% if log.transaction_type == 'withdraw' %}
+                <span class="badge bg-danger">Withdraw</span>
+              {% else %}
+                <span class="badge bg-primary">Send to Admin</span>
+              {% endif %}
+            </td>
+            <td>{{ log.requested_amount }} SZL</td>
+            <td>
+              {% if log.actual_amount != log.requested_amount %}
+                <strong>{{ log.actual_amount }} SZL</strong>
+                <small class="text-muted">(adjusted)</small>
+              {% else %}
+                {{ log.actual_amount }} SZL
+              {% endif %}
+            </td>
+            <td>{{ log.approved_by.get_full_name|default:log.approved_by.username }}</td>
+            <td class="text-muted small">{{ log.note|default:"—" }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+        <tfoot class="table-light">
+          <tr>
+            <td colspan="2"><strong>Total</strong></td>
+            <td>
+              {% with total_requested=logs|length %}
+                —
+              {% endwith %}
+            </td>
+            <td>
+              <strong>
+                {% with ns=0 %}
+                  {% for log in logs %}
+                    {% if forloop.last %}
+                      {{ logs|length }} transactions
+                    {% endif %}
+                  {% endfor %}
+                {% endwith %}
+              </strong>
+            </td>
+            <td colspan="2"></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+
+  {% else %}
+  <div class="card">
+    <div class="card-body text-center text-muted py-5">
+      <p class="mb-0">No approved transactions recorded for this agent yet.</p>
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

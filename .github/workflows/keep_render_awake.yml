@@ -1,0 +1,42 @@
+# name: Keep Render App Awake (Mon–Fri, 8 AM–8 PM CAT)
+
+# on:
+#   schedule:
+#     # Run every 3 minutes, Monday–Friday, 6:00–18:00 UTC (8 AM–8 PM CAT)
+#     - cron: "*/6 6-15 * * 1-5"
+#   workflow_dispatch:  # allows manual trigger from GitHub UI
+
+# jobs:
+
+#   ping-render:
+#     runs-on: ubuntu-latest
+
+#     steps:
+#       - name: Ping Render App and Log Response
+#         run: |
+#           APP_URL="https://micro-finance-beo1.onrender.com/"
+#           echo "==========================================="
+#           echo "🕒 Starting Render ping at $(date -u)"
+#           echo "Target URL: $APP_URL"
+#           echo "-------------------------------------------"
+
+#           # Random delay (to prevent overlap)
+#           delay=$((RANDOM % 60))
+#           echo "Waiting $delay seconds before ping..."
+#           sleep $delay
+
+#           # Ping app and capture response code
+#           RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" "$APP_URL")
+
+#           if [ "$RESPONSE" -eq 200 ]; then
+#             echo "✅ SUCCESS: App responded with HTTP 200"
+#           elif [ "$RESPONSE" -eq 301 ] || [ "$RESPONSE" -eq 302 ]; then
+#             echo "⚠️ REDIRECT: App responded with HTTP $RESPONSE"
+#           elif [ "$RESPONSE" -eq 000 ]; then
+#             echo "❌ ERROR: Could not connect (possibly sleeping)"
+#           else
+#             echo "⚠️ UNEXPECTED RESPONSE: HTTP $RESPONSE"
+#           fi
+
+#           echo "Ping completed at $(date -u)"
+#           echo "==========================================="

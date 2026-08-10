@@ -1,0 +1,10 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h2>Add Loan for Existing Customer</h2>
+<form method="post">
+    {% csrf_token %}
+    {{ loan_form.as_p }}
+    <button type="submit" class="btn btn-primary">Add Loan</button>
+</form>
+{% endblock %}

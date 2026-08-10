@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}Generate Agent Invite{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <div class="card shadow-sm p-4">
+    <h3 class="mb-3">Agent Registration Link</h3>
+    <p>Send this link to the agent. It is valid for 2 hours:</p>
+
+    <div class="input-group mb-3">
+      <input type="text" class="form-control" id="registrationLink" value="{{ registration_url }}" readonly>
+      <button class="btn btn-outline-secondary" type="button" onclick="copyLink()">Copy</button>
+    </div>
+
+    <p><strong>Expires at:</strong> {{ expires|date:"Y-m-d H:i:s" }}</p>
+
+    <!-- Optional: regenerate link -->
+    <form method="post">
+      {% csrf_token %}
+      <button class="btn btn-primary mt-2">Generate New Link</button>
+    </form>
+  </div>
+</div>
+
+<script>
+function copyLink() {
+    var copyText = document.getElementById("registrationLink");
+    copyText.select();
+    copyText.setSelectionRange(0, 99999); // For mobile devices
+    navigator.clipboard.writeText(copyText.value)
+      .then(() => {
+        alert("Link copied to clipboard!");
+      })
+      .catch(err => {
+        alert("Failed to copy link. Please copy manually.");
+      });
+}
+</script>
+{% endblock %}
