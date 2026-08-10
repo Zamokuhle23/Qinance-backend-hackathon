@@ -40,15 +40,9 @@ class LoanAdvisor:
             'total_repayments': total_rep, 'on_time_percentage': consistency,
         }
 
-        # 1. Deterministic Python limit using existing evaluate_customer_loan_range algorithm
-        from loans.views import evaluate_customer_loan_range
-        last_loan = Loan.objects.filter(customer=customer).order_by('-created_at').first()
-        if last_loan:
-            lower, upper, blacklist = evaluate_customer_loan_range(last_loan)
-            python_ceiling = float(upper)
-        else:
-            settings = LoanSettings.objects.first()
-            python_ceiling = float(settings.max_loan_amount) if settings else 500.0
+        # 1. Deterministic Python limit using pre-calculated customer.credit_score directly
+        settings = LoanSettings.objects.first()
+        python_ceiling = float(customer.credit_score) if customer.credit_score else (float(settings.max_loan_amount) if settings else 500.0)
 
         # Define Gemini cap with some room (+15%)
         gemini_cap = round(python_ceiling * 1.15, 2)
