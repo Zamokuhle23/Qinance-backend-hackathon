@@ -1064,6 +1064,32 @@ class AgentWithdrawRequestAPIView(APIView):
 from .serializers import PendingLoanApplicationSerializer
 from services.ai.loan_advisor import LoanAdvisor
 
+def _run_underwriting(app_id):
+    """Run Gemini underwriting in a background thread and update the pending application."""
+    import logging
+    logger = logging.getLogger(__name__)
+    try:
+        from django.db import close_old_connections
+        app = PendingLoanApplication.objects.select_related('customer').get(id=app_id)
+        advisor = LoanAdvisor()
+        result = advisor.get_loan_advice(app.customer)
+        if result.get('success') and result.get('advice'):
+            advice = result['advice']
+            app.ai_suggested_amount = Decimal(str(advice.get('suggested_loan_amount', app.requested_amount)))
+            app.ai_risk = advice.get('risk_summary', 'medium')
+            app.ai_confidence = advice.get('confidence', 50)
+            app.ai_explanation = advice.get('explanation', '')
+            app.ai_reasons = advice.get('reasons', [])
+            app.save()
+            logger.info(f'Underwriting completed for pending app {app_id}')
+        else:
+            logger.warning(f'Underwriting failed for pending app {app_id}: {result.get("error")}')
+    except Exception as e:
+        logger.error(f'Underwriting error for pending app {app_id}: {e}')
+    finally:
+        close_old_connections()
+
+
 class PendingLoanApplicationListCreateAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -1073,13 +1099,14 @@ class PendingLoanApplicationListCreateAPIView(APIView):
         return Response(PendingLoanApplicationSerializer(apps, many=True).data)
 
     def post(self, request):
+        import threading
         agent_profile = get_object_or_404(AgentProfile, user=request.user)
         customer_id = request.data.get('customer')
         customer = get_object_or_404(Customer, id=customer_id, agent=agent_profile)
 
         if customer.blacklisted:
             return Response({'error': 'Customer is blacklisted.'}, status=400)
-        
+
         # Async applications are allowed even if the customer has an active loan.
         # The active loan check is enforced at the approval/accept stage instead.
 
@@ -1088,25 +1115,22 @@ class PendingLoanApplicationListCreateAPIView(APIView):
         if existing:
             return Response(PendingLoanApplicationSerializer(existing).data, status=200)
 
-        # Run Gemini underwriting synchronously in background
-        advisor = LoanAdvisor()
-        result = advisor.get_loan_advice(customer)
-        if not result['success']:
-            return Response({'error': 'AI Underwriting service temporary unavailable.'}, status=502)
-
-        advice = result['advice'] or {}
-        
+        # Create the pending application immediately with default values.
+        # Gemini underwriting runs in the background and fills in the advice.
         app = PendingLoanApplication.objects.create(
             customer=customer,
             agent=agent_profile,
             requested_amount=Decimal('200.00'),
-            ai_suggested_amount=Decimal(str(advice.get('suggested_loan_amount', 200))),
-            ai_risk=advice.get('risk_summary', 'medium'),
-            ai_confidence=advice.get('confidence', 50),
-            ai_explanation=advice.get('explanation', ''),
-            ai_reasons=advice.get('reasons', []),
+            ai_suggested_amount=None,
+            ai_risk='',
+            ai_confidence=None,
+            ai_explanation='',
+            ai_reasons=[],
             status='pending'
         )
+
+        # Kick off Gemini underwriting in a background thread so the API returns immediately.
+        threading.Thread(target=_run_underwriting, args=(app.id,), daemon=True).start()
 
         return Response(PendingLoanApplicationSerializer(app).data, status=201)
 
