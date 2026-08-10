@@ -14,9 +14,9 @@ Analyze the following anonymised loan profile, loan summary, and repayment histo
 You need to suggest a recommended loan amount and evaluate creditworthiness.
 
 CRITICAL GUARDRAIL POLICIES:
-- Note: 'credit_score' is a scoring metric (NOT a maximum loan limit). 
-- The deterministic Python ceiling is set at E{python_ceiling}.
-- The absolute upper cap is set at E{gemini_cap}.
+- Note: 'credit_score' directly represents the customer's pre-calculated maximum loan limit (e.g., if credit_score is 500, their previous maximum allowed loan limit was E500).
+- The deterministic Python ceiling (newly adjusted based on repayment history) is set at E{python_ceiling}.
+- The absolute upper cap (giving cushion room for growth) is set at E{gemini_cap}.
 - Your proposed 'suggested_loan_amount' MUST be a number, and MUST NOT exceed the absolute cap of E{gemini_cap}.
 - Suggest a reasonable amount within the E{python_ceiling} to E{gemini_cap} range (e.g. if python_ceiling is E500, suggest something like E500 to E575, never suggest E3000+).
 
