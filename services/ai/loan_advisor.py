@@ -47,27 +47,33 @@ class LoanAdvisor:
         # Define Gemini cap with some room (+15%)
         gemini_cap = round(python_ceiling * 1.15, 2)
 
-        # 1b. Enhanced repayment metrics based on repayment history (if exists)
-        last_loan = Loan.objects.filter(customer=customer).order_by('-created_at').first()
-        repayment_stats = {}
-        if last_loan:
-            repayments_last = Repayment.objects.filter(loan=last_loan)
+        # 1b. Chronological repayment history paragraphs for all loans (showing shifts in behavior)
+        loans_history_detail = []
+        past_loans_list = list(Loan.objects.filter(customer=customer).order_by('created_at'))
+        
+        for idx, l in enumerate(past_loans_list, 1):
+            repayments_last = Repayment.objects.filter(loan=l)
             if repayments_last.exists():
                 from django.db.models import Avg, Max, Min
-                repayment_stats = {
-                    'average_daily_payment_made': float(repayments_last.aggregate(avg=Avg('amount_paid'))['avg'] or 0),
-                    'maximum_daily_payment_made': float(repayments_last.aggregate(max=Max('amount_paid'))['max'] or 0),
-                    'minimum_daily_payment_made': float(repayments_last.aggregate(min=Min('amount_paid'))['min'] or 0),
-                    'days_missed_on_last_loan': last_loan.days_missed,
-                    'required_daily_payment_on_last_loan': float(last_loan.daily_payment),
-                }
+                avg_pay = float(repayments_last.aggregate(avg=Avg('amount_paid'))['avg'] or 0)
+                max_pay = float(repayments_last.aggregate(max=Max('amount_paid'))['max'] or 0)
+                min_pay = float(repayments_last.aggregate(min=Min('amount_paid'))['min'] or 0)
+                detail_paragraph = (
+                    f"Loan #{idx} (Principal: E{float(l.principal_amount):.2f}, Interest: {l.interest_rate}%, Status: {l.status}): "
+                    f"Active from {l.start_date} to {l.end_date}. Required daily payment was E{float(l.daily_payment):.2f}. "
+                    f"Repayment behaviour: made {repayments_last.count()} total repayments. Average daily amount paid was E{avg_pay:.2f}, "
+                    f"maximum single day paid was E{max_pay:.2f}, minimum single day paid was E{min_pay:.2f}. "
+                    f"Days missed on this loan: {l.days_missed}."
+                )
             else:
-                repayment_stats = {
-                    'days_missed_on_last_loan': last_loan.days_missed,
-                    'required_daily_payment_on_last_loan': float(last_loan.daily_payment),
-                }
-        
-        repayment_summary.update(repayment_stats)
+                detail_paragraph = (
+                    f"Loan #{idx} (Principal: E{float(l.principal_amount):.2f}, Interest: {l.interest_rate}%, Status: {l.status}): "
+                    f"Active from {l.start_date} to {l.end_date}. Required daily payment was E{float(l.daily_payment):.2f}. "
+                    f"No repayments made yet. Days missed: {l.days_missed}."
+                )
+            loans_history_detail.append(detail_paragraph)
+
+        repayment_summary['chronological_loan_history_paragraphs'] = loans_history_detail
 
         # 2. Enrich profile context with calculated limits and location
         profile['deterministic_ceiling'] = python_ceiling
