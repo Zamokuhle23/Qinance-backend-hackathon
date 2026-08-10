@@ -53,6 +53,27 @@ class LoanAdvisor:
         # Define Gemini cap with some room (+15%)
         gemini_cap = round(python_ceiling * 1.15, 2)
 
+        # 1b. Enhanced repayment metrics based on repayment history (if exists)
+        repayment_stats = {}
+        if last_loan:
+            repayments_last = Repayment.objects.filter(loan=last_loan)
+            if repayments_last.exists():
+                from django.db.models import Avg, Max, Min
+                repayment_stats = {
+                    'average_daily_payment_made': float(repayments_last.aggregate(avg=Avg('amount_paid'))['avg'] or 0),
+                    'maximum_daily_payment_made': float(repayments_last.aggregate(max=Max('amount_paid'))['max'] or 0),
+                    'minimum_daily_payment_made': float(repayments_last.aggregate(min=Min('amount_paid'))['min'] or 0),
+                    'days_missed_on_last_loan': last_loan.days_missed,
+                    'required_daily_payment_on_last_loan': float(last_loan.daily_payment),
+                }
+            else:
+                repayment_stats = {
+                    'days_missed_on_last_loan': last_loan.days_missed,
+                    'required_daily_payment_on_last_loan': float(last_loan.daily_payment),
+                }
+        
+        repayment_summary.update(repayment_stats)
+
         # 2. Enrich profile context with calculated limits and location
         profile['deterministic_ceiling'] = python_ceiling
         profile['gemini_absolute_cap'] = gemini_cap
