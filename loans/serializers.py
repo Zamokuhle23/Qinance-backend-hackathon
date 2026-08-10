@@ -42,10 +42,6 @@ class AgentProfileSerializer(serializers.ModelSerializer):
 class CustomerSerializer(serializers.ModelSerializer):
     agent_name = serializers.CharField(source='agent.user.username', read_only=True)
     agent_id = serializers.IntegerField(source='agent.id', read_only=True)
-    has_active_loan = serializers.SerializerMethodField()
-
-    def get_has_active_loan(self, obj):
-        return obj.loan_set.filter(status='active').exists()
 
     class Meta:
         model = Customer
