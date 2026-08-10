@@ -48,6 +48,7 @@ class LoanAdvisor:
         gemini_cap = round(python_ceiling * 1.15, 2)
 
         # 1b. Enhanced repayment metrics based on repayment history (if exists)
+        last_loan = Loan.objects.filter(customer=customer).order_by('-created_at').first()
         repayment_stats = {}
         if last_loan:
             repayments_last = Repayment.objects.filter(loan=last_loan)
