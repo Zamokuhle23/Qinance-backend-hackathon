@@ -18,6 +18,8 @@ urlpatterns = [
     path('batch-payment/', api_views.BatchPaymentAPIView.as_view()),
     path('loan-calculator/', api_views.LoanCalculatorAPIView.as_view()),
     path('send-to-admin/', api_views.AgentSendToAdminAPIView.as_view()),
+    path('pending-applications/', api_views.PendingLoanApplicationListCreateAPIView.as_view()),
+    path('pending-applications/<int:pk>/action/', api_views.PendingLoanApplicationActionAPIView.as_view()),
 
     # Admin
     path('admin/dashboard/', api_views.AdminDashboardAPIView.as_view()),

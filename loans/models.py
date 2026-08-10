@@ -587,3 +587,24 @@ class AdminNotification(models.Model):
         return cls.objects.filter(
             expires_at__gt=now
         ).exclude(dismissed_by=user)
+
+
+class PendingLoanApplication(models.Model):
+    STATUS_CHOICES = (
+        ('pending', 'Pending'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+    )
+    customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name='pending_applications')
+    agent = models.ForeignKey(AgentProfile, on_delete=models.CASCADE)
+    requested_amount = models.DecimalField(max_digits=12, decimal_places=2, default=200.0)
+    
+    # Store pre-calculated Gemini credit report results
+    ai_suggested_amount = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    ai_risk = models.CharField(max_length=20, blank=True, default='')
+    ai_confidence = models.IntegerField(null=True, blank=True)
+    ai_explanation = models.TextField(blank=True, default='')
+    ai_reasons = models.JSONField(null=True, blank=True)
+    
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
+    created_at = models.DateTimeField(auto_now_add=True)

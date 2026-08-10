@@ -1051,3 +1051,113 @@ class AgentWithdrawRequestAPIView(APIView):
         )
         AdminNotification.create_withdrawal_notice(agent.user, amount)
         return Response(AdminTransactionRequestSerializer(req).data, status=201)
+
+
+from .models import PendingLoanApplication
+from .serializers import PendingLoanApplicationSerializer
+from services.ai.loan_advisor import LoanAdvisor
+
+class PendingLoanApplicationListCreateAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        agent_profile = get_object_or_404(AgentProfile, user=request.user)
+        apps = PendingLoanApplication.objects.filter(agent=agent_profile).order_by('-created_at')
+        return Response(PendingLoanApplicationSerializer(apps, many=True).data)
+
+    def post(self, request):
+        agent_profile = get_object_or_404(AgentProfile, user=request.user)
+        customer_id = request.data.get('customer')
+        customer = get_object_or_404(Customer, id=customer_id, agent=agent_profile)
+
+        if customer.blacklisted:
+            return Response({'error': 'Customer is blacklisted.'}, status=400)
+        
+        # Check if they already have an active loan
+        if Loan.objects.filter(customer=customer, status='active').exists():
+            return Response({'error': 'Customer already has an active loan.'}, status=400)
+
+        # Check if there is an existing pending application
+        existing = PendingLoanApplication.objects.filter(customer=customer, status='pending').first()
+        if existing:
+            return Response(PendingLoanApplicationSerializer(existing).data, status=200)
+
+        # Run Gemini underwriting synchronously in background
+        advisor = LoanAdvisor()
+        result = advisor.get_loan_advice(customer)
+        if not result['success']:
+            return Response({'error': 'AI Underwriting service temporary unavailable.'}, status=502)
+
+        advice = result['advice'] or {}
+        
+        app = PendingLoanApplication.objects.create(
+            customer=customer,
+            agent=agent_profile,
+            requested_amount=Decimal('200.00'),
+            ai_suggested_amount=Decimal(str(advice.get('suggested_loan_amount', 200))),
+            ai_risk=advice.get('risk_summary', 'medium'),
+            ai_confidence=advice.get('confidence', 50),
+            ai_explanation=advice.get('explanation', ''),
+            ai_reasons=advice.get('reasons', []),
+            status='pending'
+        )
+
+        return Response(PendingLoanApplicationSerializer(app).data, status=201)
+
+
+class PendingLoanApplicationActionAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @transaction.atomic
+    def post(self, request, pk):
+        agent_profile = get_object_or_404(AgentProfile, user=request.user)
+        app = get_object_or_404(PendingLoanApplication, id=pk, agent=agent_profile, status='pending')
+        action = request.data.get('action') # approve | reject
+        
+        if action == 'reject':
+            app.status = 'rejected'
+            app.save(update_fields=['status'])
+            return Response({'status': 'rejected'})
+
+        if action == 'approve':
+            # Create actual loan from the pre-calculated application limits
+            try:
+                approved_amount = Decimal(str(request.data.get('amount', app.ai_suggested_amount)))
+            except Exception:
+                return Response({'error': 'Invalid amount.'}, status=400)
+
+            if approved_amount > app.ai_suggested_amount:
+                return Response({'error': f'Approved amount cannot exceed the AI Suggested limit of E{app.ai_suggested_amount:.2f}'}, status=400)
+
+            if approved_amount > agent_profile.amount_in_hand:
+                return Response({'error': f'Insufficient cash in hand ({agent_profile.amount_in_hand} SZL).'}, status=400)
+
+            # Hard double check active loans
+            if Loan.objects.filter(customer=app.customer, status='active').exists():
+                return Response({'error': 'Customer already has an active loan.'}, status=400)
+
+            interest = Decimal('20.00')
+            days = 20 # 40 working days internally represented as 20 days in db
+
+            total_due = approved_amount + (approved_amount * interest / 100)
+            daily_payment = total_due / days
+
+            loan = Loan.objects.create(
+                customer=app.customer,
+                principal_amount=approved_amount,
+                interest_rate=interest,
+                duration_days=days,
+                total_due=total_due.quantize(Decimal('0.01')),
+                daily_payment=daily_payment.quantize(Decimal('0.01')),
+                status='active'
+            )
+
+            agent_profile.amount_in_hand -= approved_amount
+            agent_profile.save(update_fields=['amount_in_hand'])
+
+            app.status = 'approved'
+            app.save(update_fields=['status'])
+
+            return Response(LoanSerializer(loan).data, status=201)
+
+        return Response({'error': 'Invalid action.'}, status=400)

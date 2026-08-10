@@ -156,3 +156,20 @@ class AdminNotificationSerializer(serializers.ModelSerializer):
     class Meta:
         model = AdminNotification
         fields = ['id', 'message', 'created_at', 'expires_at']
+
+
+from .models import PendingLoanApplication
+
+class PendingLoanApplicationSerializer(serializers.ModelSerializer):
+    customer_name = serializers.CharField(source='customer.name', read_only=True)
+    customer_phone = serializers.CharField(source='customer.phone', read_only=True)
+    customer_location = serializers.CharField(source='customer.location', read_only=True)
+    customer_credit_score = serializers.IntegerField(source='customer.credit_score', read_only=True)
+
+    class Meta:
+        model = PendingLoanApplication
+        fields = [
+            'id', 'customer', 'customer_name', 'customer_phone', 'customer_location', 'customer_credit_score',
+            'requested_amount', 'ai_suggested_amount', 'ai_risk', 'ai_confidence',
+            'ai_explanation', 'ai_reasons', 'status', 'created_at'
+        ]
