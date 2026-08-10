@@ -17,11 +17,8 @@ class GeminiProvider:
             project="project-dc3f5fcd-73e6-4b41-989",
             location="us-central1"
         )
-        # If the loaded model is gemini-2.0-flash (unsupported on their Vertex AI), fall back to gemini-1.5-pro
-        if model == "gemini-2.0-flash":
-            self.model = "gemini-1.5-pro"
-        else:
-            self.model = model or "gemini-1.5-pro"
+        # Force gemini-2.5-flash as it is the ONLY model registered and enabled in their Vertex AI us-central1 project
+        self.model = "gemini-2.5-flash"
 
     def generate(self, prompt, system_prompt=None, temperature=None, max_tokens=None):
         """
