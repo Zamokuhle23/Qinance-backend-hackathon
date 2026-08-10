@@ -18,7 +18,8 @@ from accounts.models import AgentProfile, RegistrationToken
 from .models import (
     AdminNotification, AdminTransactionRequest, AgentDailyPerformance,
     AgentTransactionLog, CompanyFinance, Customer, FinanceTransaction,
-    Loan, LoanSettings, PublicHoliday, Repayment, get_holidays,
+    Loan, LoanSettings, PendingLoanApplication, PublicHoliday, Repayment,
+    get_holidays,
 )
 from .serializers import (
     AdminNotificationSerializer, AdminTransactionRequestSerializer,
@@ -303,10 +304,17 @@ class LoanQualificationAPIView(APIView):
         lower = int(settings.min_loan_amount) if settings else 200
         upper = customer.credit_score
 
+        has_active_loan = Loan.objects.filter(customer=customer, status='active').exists()
+        has_pending_application = PendingLoanApplication.objects.filter(
+            customer=customer, status='pending'
+        ).exists()
+
         return Response({
             'customer': CustomerSerializer(customer).data,
             'lower': lower,
             'upper': upper,
+            'has_active_loan': has_active_loan,
+            'has_pending_application': has_pending_application,
         })
 
 
@@ -1053,7 +1061,6 @@ class AgentWithdrawRequestAPIView(APIView):
         return Response(AdminTransactionRequestSerializer(req).data, status=201)
 
 
-from .models import PendingLoanApplication
 from .serializers import PendingLoanApplicationSerializer
 from services.ai.loan_advisor import LoanAdvisor
 
@@ -1073,9 +1080,8 @@ class PendingLoanApplicationListCreateAPIView(APIView):
         if customer.blacklisted:
             return Response({'error': 'Customer is blacklisted.'}, status=400)
         
-        # Check if they already have an active loan
-        if Loan.objects.filter(customer=customer, status='active').exists():
-            return Response({'error': 'Customer already has an active loan.'}, status=400)
+        # Async applications are allowed even if the customer has an active loan.
+        # The active loan check is enforced at the approval/accept stage instead.
 
         # Check if there is an existing pending application
         existing = PendingLoanApplication.objects.filter(customer=customer, status='pending').first()
