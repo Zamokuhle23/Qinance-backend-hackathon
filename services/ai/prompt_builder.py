@@ -34,16 +34,17 @@ LOAN SUMMARY:
 REPAYMENT SUMMARY:
 {repayment_summary}
 
-Return JSON with exactly these fields:
+Return JSON with exactly these fields. Use this exact JSON structure as your template:
 {{
-  "explanation": "Extremely concise, professional plain-language summary (strictly limited to 2-3 sentences max) explaining the merchant's situation, reasoning for suggested loan amount, and local context used.",
-  "risk_summary": "low|medium|high",
-  "suggested_loan_amount": number (MUST NOT exceed E{gemini_cap}),
-  "confidence": number (0-100),
-  "reasons": ["reason1 incorporating local context/events", "reason2"],
+  "explanation": "Your extremely concise, professional plain-language summary (strictly limited to 2-3 sentences max) explaining the merchant's situation, reasoning for suggested loan amount, and local context used.",
+  "risk_summary": "low",
+  "suggested_loan_amount": 250.0,
+  "confidence": 95,
+  "reasons": ["repayment history reason", "location context reason with local event details"],
   "strengths": ["strength1"],
   "weaknesses": ["weakness1"]
 }}
+Note: Under 'risk_summary' you can output either 'low', 'medium', or 'high'. Under 'suggested_loan_amount' you must output a raw number (e.g. 500.0) that must be between E200 and E{gemini_cap}.
 """
 
     BUSINESS_HEALTH_SYSTEM = (
