@@ -17,7 +17,7 @@ class GeminiProvider:
             project="project-dc3f5fcd-73e6-4b41-989",
             location="us-central1"
         )
-        self.model = "gemini-2.5-flash"
+        self.model = model or "gemini-1.5-pro"
 
     def generate(self, prompt, system_prompt=None, temperature=None, max_tokens=None):
         """
