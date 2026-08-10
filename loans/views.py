@@ -493,12 +493,6 @@ class LoanQualificationView(View):
             # Existing customer
             customer = get_object_or_404(Customer, id=customer_id)
 
-            # Check if any active loan exists
-            active_loan = Loan.objects.filter(customer=customer, status='active').exists()
-            if active_loan:
-                messages.warning(request, f"{customer.name} still has an active loan and cannot apply for another.")
-                return redirect('loans:agent_dashboard')
-
             if customer.blacklisted:
                 messages.error(request, f"{customer.name} is blacklisted and cannot apply.")
                 return redirect('loans:agent_dashboard')

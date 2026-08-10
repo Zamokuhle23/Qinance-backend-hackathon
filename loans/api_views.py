@@ -298,8 +298,6 @@ class LoanQualificationAPIView(APIView):
 
         if customer.blacklisted:
             return Response({'error': 'Customer is blacklisted.'}, status=400)
-        if Loan.objects.filter(customer=customer, status='active').exists():
-            return Response({'error': 'Customer has an active loan.'}, status=400)
 
         settings = LoanSettings.objects.first()
         lower = int(settings.min_loan_amount) if settings else 200
