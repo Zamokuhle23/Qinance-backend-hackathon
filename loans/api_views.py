@@ -232,6 +232,7 @@ class CreateCustomerLoanAPIView(APIView):
         phone = request.data.get('phone', '').strip()
         national_id = request.data.get('national_id', '').strip()
         location = request.data.get('location', '').strip()
+        business_type = request.data.get('business_type', '').strip()
 
         if not name or not phone or not national_id:
             return Response({'error': 'name, phone and national_id are required.'}, status=400)
@@ -249,6 +250,11 @@ class CreateCustomerLoanAPIView(APIView):
             national_id=national_id,
             location=location,
             credit_score=credit_score,
+            business_type=business_type,
+            monthly_revenue=request.data.get('monthly_revenue') or 0,
+            monthly_expenses=request.data.get('monthly_expenses') or 0,
+            years_operating=request.data.get('years_operating') or 0,
+            employees_count=request.data.get('employees_count') or 0,
         )
         return Response(CustomerSerializer(customer).data, status=201)
 

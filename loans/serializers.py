@@ -47,6 +47,7 @@ class CustomerSerializer(serializers.ModelSerializer):
         model = Customer
         fields = [
             'id', 'name', 'phone', 'location', 'national_id', 'created_at',
+            'business_type', 'monthly_revenue', 'monthly_expenses', 'years_operating', 'employees_count',
             'credit_score', 'blacklisted', 'has_active_loan', 'agent_name', 'agent_id',
         ]
 
@@ -78,6 +79,7 @@ class LoanSerializer(serializers.ModelSerializer):
             'days_paid', 'total_paid', 'remaining_balance', 'days_remaining',
             'days_missed', 'payment_status_color', 'is_fully_paid',
             'last_payment_at', 'created_at',
+            'purpose',
         ]
 
 

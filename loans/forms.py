@@ -14,4 +14,4 @@ class LoanForm(forms.ModelForm):
 class CustomerForm(forms.ModelForm):
     class Meta:
         model = Customer
-        fields = ['name', 'phone', 'national_id', 'location']
+        fields = ['name', 'phone', 'national_id', 'location', 'business_type', 'monthly_revenue', 'monthly_expenses', 'years_operating', 'employees_count']

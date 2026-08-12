@@ -26,7 +26,13 @@ class LoanAdvisor:
 
         profile = {
             'name': customer.name,
+            'business_type': customer.business_type,
             'location': customer.location or 'Unknown',
+            'monthly_revenue': float(customer.monthly_revenue or 0),
+            'monthly_expenses': float(customer.monthly_expenses or 0),
+            'net_cashflow': max(0, float(customer.monthly_revenue or 0) - float(customer.monthly_expenses or 0)),
+            'years_operating': float(customer.years_operating or 0),
+            'employees_count': customer.employees_count,
             'credit_score': customer.credit_score,
             'blacklisted': customer.blacklisted,
             'has_active_loan': customer.has_active_loan,
@@ -39,6 +45,8 @@ class LoanAdvisor:
         repayment_summary = {
             'total_repayments': total_rep, 'on_time_percentage': consistency,
         }
+        latest_purpose = loans.first().purpose if loans.exists() else ''
+        profile['latest_loan_purpose'] = latest_purpose
 
         # 1. Deterministic Python limit using pre-calculated customer.credit_score directly
         settings = LoanSettings.objects.first()

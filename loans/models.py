@@ -26,6 +26,11 @@ class Customer(models.Model):
     credit_score = models.IntegerField(default=1000)  # determines upper limit
     blacklisted = models.BooleanField(default=False)
     has_active_loan = models.BooleanField(default=False)
+    business_type = models.CharField(max_length=100, blank=True, default='')
+    monthly_revenue = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    monthly_expenses = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    years_operating = models.DecimalField(max_digits=5, decimal_places=1, default=0)
+    employees_count = models.PositiveIntegerField(default=0)
 
     class Meta:
         indexes = [
@@ -91,6 +96,7 @@ class Loan(models.Model):
     days_paid = models.IntegerField(default=0)
     total_paid = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     display_order = models.IntegerField(default=0, db_index=True)
+    purpose = models.CharField(max_length=250, blank=True, default='')
 
     class Meta:
         indexes = [

@@ -10,7 +10,7 @@ class PromptBuilder:
     )
 
     LOAN_ADVISOR_PROMPT = """
-Analyze the following anonymised loan profile, loan summary, and repayment history of a merchant.
+Analyze the following anonymised loan profile, business details, loan summary, and repayment history of a merchant.
 You need to suggest a recommended loan amount and evaluate creditworthiness.
 
 CRITICAL GUARDRAIL POLICIES:
@@ -24,6 +24,7 @@ LOCAL CONTEXT CONSIDERATIONS:
 - The merchant's location is: {merchant_location}.
 - Research and look up any notable local town events, holidays, market days, or seasonal business opportunities near this location that could affect customer traffic.
 - Incorporate these location-specific insights or upcoming events as positive/negative signals in your loan evaluation. Any events or location factors used must be listed explicitly in your "reasons" list.
+- Use the supplied business type, revenue, expenses, cash flow, tenure, employees, and loan purpose as evidence. Do not invent a credit score; it is an internal limit only.
 
 MERCHANT PROFILE:
 {profile}
