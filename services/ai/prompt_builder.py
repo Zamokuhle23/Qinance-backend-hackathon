@@ -14,11 +14,11 @@ Analyze the following anonymised loan profile, business details, loan summary, a
 You need to suggest a recommended loan amount and evaluate creditworthiness.
 
 CRITICAL GUARDRAIL POLICIES:
-- Note: 'credit_score' directly represents the customer's pre-calculated maximum loan limit (e.g., if credit_score is 500, their previous maximum allowed loan limit was E500).
-- The deterministic Python ceiling (newly adjusted based on repayment history) is set at E{python_ceiling}.
+- The backend has calculated the current deterministic range from the merchant's loan history using its Python policy. The calculated minimum is E{python_floor} and maximum/ceiling is E{python_ceiling}.
+- Do not use the persisted customer.credit_score as the loan limit; it is only a legacy cached field and may be stale.
 - The absolute upper cap (giving cushion room for growth) is set at E{gemini_cap}.
 - Your proposed 'suggested_loan_amount' MUST be a number, and MUST NOT exceed the absolute cap of E{gemini_cap}.
-- Suggest a reasonable amount within the E{python_ceiling} to E{gemini_cap} range (e.g. if python_ceiling is E500, suggest something like E500 to E575, never suggest E3000+).
+- Suggest a defensible amount from E{python_floor} up to E{gemini_cap}. You may recommend below the deterministic ceiling when the profile supports a smaller safe amount. Use the buffer above E{python_ceiling} only when a concrete, evidenced opportunity justifies it.
 
 LOCAL CONTEXT CONSIDERATIONS:
 - The merchant's location is: {merchant_location}.
@@ -45,7 +45,7 @@ Return JSON with exactly these fields. Use this exact JSON structure as your tem
   "strengths": ["strength1"],
   "weaknesses": ["weakness1"]
 }}
-Note: Under 'risk_summary' you can output either 'low', 'medium', or 'high'. Under 'suggested_loan_amount' you must output a raw number (e.g. 500.0) that must be between E200 and E{gemini_cap}.
+Note: Under 'risk_summary' you can output either 'low', 'medium', or 'high'. Under 'suggested_loan_amount' you must output a raw number (e.g. 500.0) that must not exceed E{gemini_cap} and should normally be at least E{python_floor} unless the merchant is high risk or blacklisted.
 """
 
     BUSINESS_HEALTH_SYSTEM = (
@@ -77,11 +77,13 @@ Return JSON with exactly these fields:
     def build_loan_advisor_prompt(profile_json, loan_summary, repayment_summary):
         import json
         profile = json.loads(profile_json)
+        python_floor = profile.get('deterministic_floor', 200)
         python_ceiling = profile.get('deterministic_ceiling', 500)
         gemini_cap = profile.get('gemini_absolute_cap', 575)
         merchant_location = profile.get('merchant_location', 'Unknown')
         
         return PromptBuilder.LOAN_ADVISOR_PROMPT.format(
+            python_floor=python_floor,
             python_ceiling=python_ceiling,
             gemini_cap=gemini_cap,
             merchant_location=merchant_location,

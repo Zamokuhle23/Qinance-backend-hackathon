@@ -10,7 +10,8 @@ class LoanAdvisor:
         self.ai_service = AIService()
 
     def get_loan_advice(self, customer, requested_amount=None):
-        from loans.models import Loan, Repayment, LoanSettings
+        from loans.models import Loan, Repayment
+        from loans.views import evaluate_customer_loan_range
 
         loans = Loan.objects.filter(customer=customer).order_by('-created_at')
         total = loans.count()
@@ -48,9 +49,15 @@ class LoanAdvisor:
         latest_purpose = loans.first().purpose if loans.exists() else ''
         profile['latest_loan_purpose'] = latest_purpose
 
-        # 1. Deterministic Python limit using pre-calculated customer.credit_score directly
-        settings = LoanSettings.objects.first()
-        python_ceiling = float(customer.credit_score) if customer.credit_score else (float(settings.max_loan_amount) if settings else 500.0)
+        # Calculate the current policy range from repayment history before calling
+        # Gemini.  The persisted credit_score is a legacy cached value and must
+        # never be used as the underwriting ceiling for a new assessment.
+        previous_loan = loans.exclude(status='active').first()
+        python_floor, python_ceiling, blacklist_recommended = evaluate_customer_loan_range(previous_loan)
+        python_floor = float(python_floor)
+        python_ceiling = float(python_ceiling)
+        if blacklist_recommended:
+            python_floor = python_ceiling = 0.0
 
         # Define Gemini cap with some room (+15%)
         gemini_cap = round(python_ceiling * 1.15, 2)
@@ -85,6 +92,13 @@ class LoanAdvisor:
 
         # 2. Enrich profile context with calculated limits and location
         profile['deterministic_ceiling'] = python_ceiling
+        profile['deterministic_floor'] = python_floor
+        profile['calculated_loan_range'] = {
+            'minimum': python_floor,
+            'maximum': python_ceiling,
+            'blacklist_recommended': blacklist_recommended,
+            'based_on_loan_id': previous_loan.id if previous_loan else None,
+        }
         profile['gemini_absolute_cap'] = gemini_cap
         profile['merchant_location'] = customer.location or 'Unknown'
 
