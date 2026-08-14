@@ -621,12 +621,14 @@ class AdminDashboardAPIView(APIView):
         notifications = AdminNotification.active_for_user(request.user)
         pending = AdminTransactionRequest.objects.filter(status='pending').select_related('agent__user')
         settings = LoanSettings.objects.first()
+        all_time_loaned = Loan.objects.aggregate(total=Sum('principal_amount'))['total'] or Decimal('0')
 
         return Response({
             'stats': {
                 'total_customers': Customer.objects.count(),
                 'total_loans': Loan.objects.count(),
                 'active_loans': Loan.objects.filter(status='active').count(),
+                'all_time_loaned': str(all_time_loaned),
                 'company_balance': str(finance.total_amount),
             },
             'loan_settings': LoanSettingsSerializer(settings).data if settings else None,
