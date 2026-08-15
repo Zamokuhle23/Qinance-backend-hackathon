@@ -66,28 +66,6 @@ class Customer(models.Model):
 
         self.save()
 
-
-class DiscountCampaign(models.Model):
-    STATUS_CHOICES = (
-        ('active', 'Active'),
-        ('paused', 'Paused'),
-        ('ended', 'Ended'),
-    )
-
-    customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name='discount_campaigns')
-    name = models.CharField(max_length=150)
-    discount_percent = models.DecimalField(max_digits=5, decimal_places=2)
-    latitude = models.DecimalField(max_digits=10, decimal_places=7)
-    longitude = models.DecimalField(max_digits=10, decimal_places=7)
-    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='active')
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        ordering = ['-created_at']
-
-    def __str__(self):
-        return f'{self.name} - {self.customer.name}'
-
 def get_holidays():
     """Return a cached set of public holiday dates. Refreshes every hour."""
     from django.core.cache import cache
