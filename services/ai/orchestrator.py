@@ -21,6 +21,7 @@ Python always performs calculations.
 
 import json
 import logging
+import re
 import time
 
 from .ai_service import AIService
@@ -117,6 +118,17 @@ class AIOrchestrator:
 
         intent_latency_ms = int((time.time() - start) * 1000)
 
+        if tool_name == 'create_discount_campaign' and tool_result.get('ok'):
+            campaign = tool_result['data']['campaign']
+            return {
+                'reply': f"Campaign '{campaign['name']}' is now active with a {campaign['discount_percent']}% discount.",
+                'tool': tool_name,
+                'tool_result': tool_result,
+                'intent_latency_ms': intent_latency_ms,
+                'response_latency_ms': int((time.time() - start) * 1000),
+                'tokens': 0,
+            }
+
         # 3. If no tool was selected, fall back to a plain response.
         if tool_name == 'none':
             reply = self._fallback_reply(message, role)
@@ -159,6 +171,9 @@ class AIOrchestrator:
 
     def _detect_intent(self, message, role):
         """Ask Gemini to select a tool — Gemini never executes anything."""
+        confirmed_campaign = self._detect_confirmed_campaign(message)
+        if confirmed_campaign:
+            return confirmed_campaign
         tools = ToolRegistry.list(role=role)
         if not tools:
             return {'tool': 'none', 'params': {}, 'reasoning': 'No tools available for this role.'}
@@ -178,6 +193,37 @@ class AIOrchestrator:
             logger.warning('Intent detection failed: %s', result.get('error'))
             return {'tool': 'none', 'params': {}, 'reasoning': result.get('error', '')}
         return result['data'] or {'tool': 'none', 'params': {}}
+
+    @staticmethod
+    def _detect_confirmed_campaign(message):
+        """Handle campaign confirmation without relying on LLM intent parsing."""
+        if not re.search(r'\bconfirm\s+campaign\b', message, re.IGNORECASE):
+            return None
+
+        discount_match = re.search(r'(\d+(?:\.\d+)?)\s*%\s*discount', message, re.IGNORECASE)
+        location_match = re.search(
+            r'location\s*(?::\s*|\s+)(-?\d+(?:\.\d+)?)\s*[, ]\s*(-?\d+(?:\.\d+)?)',
+            message,
+            re.IGNORECASE,
+        )
+        name_match = re.search(
+            r'confirm\s+campaign\s*:\s*(.+?)\s+for\s+\d+(?:\.\d+)?\s*%\s*discount',
+            message,
+            re.IGNORECASE,
+        )
+        if not (discount_match and location_match and name_match):
+            return {'tool': 'none', 'params': {}, 'reasoning': 'Campaign confirmation is missing required details.'}
+
+        return {
+            'tool': 'create_discount_campaign',
+            'params': {
+                'name': name_match.group(1).strip(),
+                'discount_percent': discount_match.group(1),
+                'latitude': location_match.group(1),
+                'longitude': location_match.group(2),
+            },
+            'reasoning': 'The user explicitly confirmed the campaign details.',
+        }
 
     def _fallback_reply(self, message, role):
         """Plain explanation without tools (used when no tool matches)."""
