@@ -136,14 +136,14 @@ class Loan(models.Model):
 
     @property
     def virtual_duration_days(self):
-        if self.duration_days in (20, 25):
-            return 40
+        if self.duration_days in (20, 25, 30):
+            return 60
         return self.duration_days
 
     @property
     def virtual_daily_payment(self):
-        if self.duration_days in (20, 25):
-            return (self.total_due / Decimal('40')).quantize(Decimal('0.01'))
+        if self.duration_days in (20, 25, 30):
+            return (self.total_due / Decimal('60')).quantize(Decimal('0.01'))
         return self.daily_payment
 
     @property
@@ -303,8 +303,8 @@ class Loan(models.Model):
         """
         Expected working days depending on loan type
         """
-        if self.interest_rate in (20, 25) or self.duration_days in (20, 25):
-            return 40
+        if self.interest_rate in (20, 25) or self.duration_days in (20, 25, 30):
+            return 60
         return self.duration_days
 
     @property
@@ -331,10 +331,10 @@ class Loan(models.Model):
         LOAN_LADDER_25 = [400, 500, 600, 1000, 1500, 2000, 2500, 3000, 3500]
 
         # Select ladder and rules
-        if self.interest_rate in (20, 25) or self.duration_days in (20, 25):
+        if self.interest_rate in (20, 25) or self.duration_days in (20, 25, 30):
             ladder = LOAN_LADDER_20 if self.interest_rate == 20 else LOAN_LADDER_25
-            expected_days = 40
-            late_cutoff = 42
+            expected_days = 60
+            late_cutoff = 62
         else:
             ladder = LOAN_LADDER_25
             expected_days = 25
